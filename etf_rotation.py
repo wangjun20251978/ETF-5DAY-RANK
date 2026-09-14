@@ -44,12 +44,7 @@ W_M, W_V, W_F   = 0.4, 0.3, 0.3
 
 HOLD_SIGNAL     = 2         # 信号定义: 综合前N(中性默认前2)且风控通过
 BACKTEST_HOLDS  = [1, 3, 5, 10, 20]   # 回测持有期档位(天)
-# ---- 回测/排行口径 (与实盘持仓口径分开) ----
-# 实盘持仓只买综合前2名, 但"前2名"历史上每只ETF只有0~5个样本, 无法统计排行。
-# 这里放宽到前N名做统计口径, N越大样本越多(前20名样本约488个, 前2名仅29个)。
-BT_SIGNAL_N     = 20        # 回测信号口径: 综合前N名且风控通过
-RANK_HOLD       = 5         # 「5日平均收益」排行用的持有天数
-LOW_SAMPLE      = 5         # 样本数低于此值, 排行参考价值低(页面会标⚠)
+BT_SIGNAL_N     = 20        # 回测信号口径(最优持股列用): 综合前N名且风控通过
 HISTORY_WINDOW  = 100       # 用于回测/信号天数回溯的交易日窗口
 GRID_PCT        = 0.05      # 网格幅度 ±5%
 MAX_HOLD        = 2         # 中性时持仓数量(展示用)
@@ -407,16 +402,14 @@ def render(records, now_str, live, market=None):
     for i, r in enumerate(by_total, 1):
         r["rank"] = i
 
-    # ---- 表格展示顺序: 按「5日平均收益」(信号触发后持有5天) 降序排行 ----
-    # 无回测样本(历史上从未触发信号)的标的排最后
-    def _bt5_key(r):
-        b = r.get("bt")
-        if b and b.get("avg"):
-            v = b["avg"].get(5)
-            if v is not None:
-                return (0, -v)
-        return (1, 0.0)
-    ranked = sorted(records, key=_bt5_key)
+    # ---- 表格展示顺序: 按「5日收益」(近5个交易日累计涨幅) 降序排行 ----
+    # 无5日收益数据(未抓到)的标的排最后; 5日均收益 = 5日收益 ÷ 5, 除5不改变排序
+    def _five_key(r):
+        v = r.get("five_chg")
+        if v is None:
+            return (1, 0.0)
+        return (0, -v)
+    ranked = sorted(records, key=_five_key)
     for i, r in enumerate(ranked, 1):
         r["disp_rank"] = i
 
@@ -455,34 +448,31 @@ def render(records, now_str, live, market=None):
         bt = r.get("bt")
         bt_s = ("%d天" % bt["best"]) if bt else "—"
         bt_d = ("均%s" % sgn(bt["avg"][bt["best"]])) if bt else ""
-        # 5日平均收益: 信号触发后持有 RANK_HOLD 天的历史平均收益(带胜率与样本数)
-        b5 = bt["avg"].get(RANK_HOLD) if bt else None
-        if b5 is None:
-            bt5_td = '<td class="flat">—</td>'
+        # 5日均收益 = 5日收益 ÷ 5 (算术平均, 简单展示)
+        fa = r.get("five_chg")
+        if fa is None:
+            fa_td = '<td class="flat">—</td>'
         else:
-            warn = ('<span class="low">⚠样本少</span>'
-                    if bt["n"] < LOW_SAMPLE else '')
-            bt5_td = ('<td class="%s"><b>%s</b>%s<br>'
-                      '<span class="td2">胜率%.0f%%·样本%d</span></td>'
-                      % ("pos" if b5 >= 0 else "neg", sgn(b5), warn,
-                         bt["win"].get(RANK_HOLD, 0), bt["n"]))
+            fa_td = '<td class="%s">%s</td>' % ("pos" if fa >= 0 else "neg", sgn(fa / 5))
         rows_html += (
             "<tr%s>\n"
             "  <td>%d</td><td class=\"code\">%s</td><td class=\"name\">%s</td>\n"
             "  <td>%.3f</td><td class=\"%s\">%s</td>\n"
             "  %s\n"
+            "  %s\n"
             "  <td class=\"%s\">%s</td><td>%.2f</td>\n"
             "  <td>%.1f%%</td><td>%.1f</td>\n"
             "  <td>%.2f</td><td>%.1f</td>\n"
             "  <td class=\"total\">%.2f</td><td>%s</td>\n"
-            "  <td>%s</td><td>%s<br><span class=\"td2\">%s</span></td>%s<td class=\"%s\">%s</td>\n"
+            "  <td>%s</td><td>%s<br><span class=\"td2\">%s</span></td><td class=\"%s\">%s</td>\n"
             "</tr>\n" % (
                 hl, r["disp_rank"], r["code"], r["name"], r["price"], dcls, sgn(r["day_chg"]),
                 pct_td(r.get("five_chg")),
+                fa_td,
                 tcls, sgn(r["ten_chg"]), r["m"], r["v_pct"], r["v_score"],
                 r["f_ratio"], r["f_score"], r["total"], badge,
                 (str(sig_d) + "天") if sig_d > 0 else "—",
-                bt_s, bt_d, bt5_td, act_cls, act)
+                bt_s, bt_d, act_cls, act)
         )
 
     # 历史记录
@@ -523,7 +513,7 @@ def render(records, now_str, live, market=None):
 
     src = "新浪财经(实时)" if live else "新浪财经(离线快照)"
     html = TEMPLATE % (
-        len(ranked), BT_SIGNAL_N, now_str, src, market_html, cards, rows_html, hist_rows,
+        len(ranked), now_str, src, market_html, cards, rows_html, hist_rows,
     )
     return html, entry
 
@@ -534,10 +524,8 @@ def _card_html(r, per, market):
     bt = r.get("bt")
     bt_s = ("历史最优持股 <b>%d天</b>(均收益 %+.1f%%, 胜率 %.0f%%)" % (
         bt["best"], bt["avg"][bt["best"]], bt["win"][bt["best"]])) if bt else "历史最优持股 —(样本不足)"
-    b5 = bt["avg"].get(RANK_HOLD) if bt else None
-    b5_s = ("信号后持有 <b>%d天</b> 平均收益 <b>%s</b>(胜率 %.0f%%, 样本%d)" % (
-        RANK_HOLD, sgn(b5), bt["win"].get(RANK_HOLD, 0), bt["n"])) if b5 is not None \
-        else "信号后持有%d天 —(样本不足)" % RANK_HOLD
+    fa = r.get("five_chg")
+    fa_span = pct_span(fa / 5) if fa is not None else '<span class="flat">—</span>'
     stop_s = ("¥%.3f" % adv["stop"]) if adv.get("stop") else "—"
     grid_s = ("¥%.3f ~ %.3f" % (adv["glo"], adv["ghi"])) if adv.get("glo") else "—"
     return (
@@ -552,19 +540,18 @@ def _card_html(r, per, market):
         '    <span>综合: <b class="fc-t">%.2f</b></span>\n'
         '  </div>\n'
         '  <div class="pw">💰 建议仓位: %d%%</div>\n'
-        '  <div class="pr">✅ 三重风控通过 | 日涨跌: %s | 5日收益: %s | 10日收益: %s | 📅 信号持续: %d天</div>\n'
+        '  <div class="pr">✅ 三重风控通过 | 日涨跌: %s | 5日收益: %s | 5日均收益: %s | 10日收益: %s | 📅 信号持续: %d天</div>\n'
         '  <div class="op %s">🎯 操作: <b>%s</b> — %s</div>\n'
         '  <div class="opd">🛡 止损参考: %s%s</div>\n'
         '  <div class="opd">🔲 网格区间: %s</div>\n'
         '  <div class="opd">📊 %s</div>\n'
-        '  <div class="opd">📅 %s</div>\n'
         '</div>' % (
             r["rank"], r["name"], r["code"], r["price"], r["m"], r["v_score"],
             r["f_score"], r["total"], round(per), pct_span(r["day_chg"]),
-            pct_span(r.get("five_chg")), pct_span(r["ten_chg"]), sig_d,
+            pct_span(r.get("five_chg")), fa_span, pct_span(r["ten_chg"]), sig_d,
             adv.get("cls", "act-hold"), adv.get("action", "—"), adv.get("detail", ""),
             stop_s, " (20日线)" if r.get("ma20") else " (-5%%硬止损)",
-            grid_s, bt_s, b5_s)
+            grid_s, bt_s)
     )
 
 
@@ -632,7 +619,7 @@ tr.hl td{border-color:rgba(63,185,80,0.3);}
 </style></head><body>
 <div class="hd"><h1>📊 ETF三因子轮动看板</h1>
 <div class="sub">动量M(40%%) + 相对低位V(30%%) + 资金流F(30%%) + 大盘择时 | 5日/10日收益 | %d只主流ETF全覆盖<br>
-🏅 表格按「5日平均收益」从高到低排行 ｜ 回测信号口径: 综合前%d名 + 三重风控通过</div>
+🏅 表格按「5日收益」从高到低排行 ｜ 5日均收益 = 5日收益 ÷ 5</div>
 <div class="dt">📅 %s</div>
 <div class="auto">⚡ 每个交易日19:00自动更新 | 数据源: %s</div>
 <a class="gridlink" href="grid.html">🧮 打开网格交易看板 →</a></div>
@@ -645,9 +632,9 @@ tr.hl td{border-color:rgba(63,185,80,0.3);}
 %s
 <div class="pc">%s</div>
 <table><thead><tr>
-<th>#</th><th>代码</th><th>名称</th><th>现价</th><th>日涨幅</th><th>5日收益</th><th>10日收益</th>
+<th>#</th><th>代码</th><th>名称</th><th>现价</th><th>日涨幅</th><th>5日收益</th><th>5日均收益</th><th>10日收益</th>
 <th>M得分</th><th>V分位</th><th>V得分</th><th>F比率</th><th>F得分</th><th>综合</th><th>风控</th>
-<th>信号天数</th><th>最优持股</th><th>5日平均收益</th><th>操作</th>
+<th>信号天数</th><th>最优持股</th><th>操作</th>
 </tr></thead><tbody>%s</tbody></table>
 
 <div class="hist-title">📋 历史推荐记录</div>
@@ -657,8 +644,8 @@ tr.hl td{border-color:rgba(63,185,80,0.3);}
 
 <div class="tip">
 📌 <b>使用说明：</b>每天19:00后查看 → 先看顶部「大盘趋势」定总仓位 → 选综合前N名(仓位随大盘缩放) → 看「信号天数」判断是否已持仓/刚触发 → 看「最优持股」定持有周期 → 按「操作」标签执行(加仓/网格/持有/止损)<br>
-📌 <b>本表排序：</b>表格按「5日平均收益」从高到低排行，无回测样本的标的排最后。「#」列是这个排行榜的序号；<b>持仓卡片仍按综合得分选出</b>，实盘策略口径没有变。<br>
-📌 <b>5日平均收益：</b>历史上"综合前N名 + 三重风控通过"的日子买入、持有5天的平均收益（小字为胜率·样本数）。<b>样本数少于5的会标⚠，排名参考价值低。</b>它衡量"这只ETF一旦被策略选中、拿5天"的历史表现，<b>和上面的「5日收益」不是一回事</b>（那个是最近5个交易日的实际涨幅）。<br>
+📌 <b>本表排序：</b>表格按「5日收益」从高到低排行（5日均收益 = 5日收益 ÷ 5，排序与5日收益一致）。「#」列是这个排行榜的序号；<b>持仓卡片仍按综合得分选出</b>，实盘策略口径没有变。<br>
+📌 <b>5日均收益：</b>就是「5日收益」这一列除以5（5日收益 ÷ 5），表示最近5个交易日平均每天涨跌幅，和「5日收益」是同一回事的不同口径。<br>
 📌 <b>5日收益：</b>近5个交易日累计涨幅，看短线动能。刚转正(0~+3%%)=刚启动可跟；已涨一大段(+10%%以上)=注意追高风险；为负但10日收益为正=短期回调。<br>
 📌 <b>10日收益：</b>近10个交易日累计涨幅，也用于M动量因子计算(占60%%)。<br>
 📌 <b>信号天数：</b>综合进入前N(中性前2)且三重风控连续通过的天数。天数越长=趋势越稳；刚触发(1~2天)=新信号，可建仓观察。<br>
