@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="ETF三因子轮动看板 - 动量M+相对低位V+资金流F+大盘择时+5日/10日收益+信号天数+回测+操作建议 - 每日自动更新">
+<title>ETF三因子轮动看板 | 每日自动更新</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--t:#c9d1d9;--td:#8b949e;--g:#3fb950;--r:#f85149;--y:#d29922;--b:#58a6ff;--tt:#e3b341;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--t);padding:20px;}
+.hd{text-align:center;margin-bottom:24px;}
+.hd h1{font-size:30px;color:var(--b);margin-bottom:8px;}
+.hd .sub{color:var(--td);font-size:14px;}
+.hd .dt{color:var(--g);font-size:16px;margin-top:4px;}
+.hd .auto{color:var(--y);font-size:12px;margin-top:4px;}
+.gridlink{display:inline-block;margin-top:10px;padding:8px 20px;background:rgba(88,166,255,.15);border:1px solid var(--b);border-radius:8px;color:var(--b);font-size:14px;font-weight:600;text-decoration:none;}
+.gridlink:hover{background:rgba(88,166,255,.32);}
+.lg{display:flex;gap:24px;justify-content:center;margin-bottom:16px;font-size:12px;color:var(--td);flex-wrap:wrap;}
+.pc{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;justify-content:center;}
+.pcard{background:var(--card);border:2px solid var(--g);border-radius:12px;padding:16px 24px;min-width:380px;text-align:center;}
+.prank{color:var(--y);font-size:14px;font-weight:bold;margin-bottom:4px;}
+.pname{font-size:22px;font-weight:bold;margin-bottom:8px;}
+.pcode{font-size:14px;color:var(--td);}
+.pdetail{font-size:13px;color:var(--td);margin-bottom:8px;}
+.pw{color:var(--g);font-size:16px;font-weight:bold;margin-bottom:4px;}
+.pr{font-size:12px;color:var(--td);}
+.op{margin-top:8px;font-size:13px;padding:6px 10px;border-radius:8px;text-align:left;line-height:1.5;}
+.op.add{background:rgba(63,185,80,0.12);border:1px solid var(--g);color:var(--g);}
+.op.grid{background:rgba(88,166,255,0.12);border:1px solid var(--b);color:var(--b);}
+.op.hold{background:rgba(210,153,34,0.10);border:1px solid var(--y);color:var(--y);}
+.op.stop{background:rgba(248,81,73,0.12);border:1px solid var(--r);color:var(--r);}
+.opd{font-size:12px;color:var(--td);margin-top:4px;text-align:left;}
+.fc-m{color:var(--b);}.fc-v{color:var(--g);}.fc-f{color:var(--y);}.fc-t{color:var(--tt);}
+.empty{background:var(--card);border:2px solid var(--y);border-radius:12px;padding:20px 40px;font-size:18px;color:var(--y);}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:8px;overflow:hidden;font-size:13px;margin-bottom:24px;}
+th{background:#21262d;color:var(--td);padding:10px 8px;text-align:center;font-weight:600;border-bottom:2px solid var(--bd);white-space:nowrap;}
+td{padding:8px;text-align:center;border-bottom:1px solid var(--bd);}
+tr.hl{background:rgba(63,185,80,0.1);}
+tr.hl td{border-color:rgba(63,185,80,0.3);}
+.code{color:var(--b);font-family:monospace;}.name{font-weight:600;}
+.pos{color:var(--r);}.neg{color:var(--g);}.flat{color:var(--td);}.total{color:var(--tt);font-weight:bold;font-size:15px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;}
+.pass{background:rgba(63,185,80,0.2);color:var(--g);}
+.fail{background:rgba(248,81,73,0.15);color:var(--r);}
+.warn{background:rgba(210,153,34,0.2);color:var(--y);}
+.act-add{color:var(--g);font-weight:600;}
+.act-grid{color:var(--b);font-weight:600;}
+.act-hold{color:var(--y);font-weight:600;}
+.act-stop{color:var(--r);font-weight:600;}
+.td2{font-size:10px;color:var(--td);}
+.low{color:var(--y);font-size:10px;}
+.mkt{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:center;margin:8px auto 22px;padding:12px 20px;border-radius:10px;font-size:14px;max-width:920px;line-height:1.6;}
+.mkt.bull{background:rgba(63,185,80,0.12);border:1px solid var(--g);color:var(--g);}
+.mkt.neutral{background:rgba(210,153,34,0.12);border:1px solid var(--y);color:var(--y);}
+.mkt.bear{background:rgba(248,81,73,0.12);border:1px solid var(--r);color:var(--r);}
+.mkt b{color:var(--t);}
+.ft{text-align:center;margin-top:24px;color:var(--td);font-size:12px;}
+.tip{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px;color:var(--td);line-height:1.8;}
+.tip b{color:var(--y);}
+.hist-title{color:var(--b);font-size:18px;font-weight:bold;margin:24px 0 12px 0;text-align:center;}
+.hist-table{font-size:12px;}
+@media(max-width:768px){table{font-size:10px;}th,td{padding:5px 3px;}.lg{gap:8px;}.mkt{font-size:12px;}}
+</style></head><body>
+<div class="hd"><h1>📊 ETF三因子轮动看板</h1>
+<div class="sub">动量M(40%) + 相对低位V(30%) + 资金流F(30%) + 大盘择时 | 5日/10日收益 | 20只主流ETF全覆盖<br>
+🏅 表格按「5日平均收益」从高到低排行 ｜ 回测信号口径: 综合前20名 + 三重风控通过</div>
+<div class="dt">📅 2026-09-14 20:13</div>
+<div class="auto">⚡ 每个交易日19:00自动更新 | 数据源: 新浪财经(实时)</div>
+<a class="gridlink" href="grid.html">🧮 打开网格交易看板 →</a></div>
+<div class="lg">
+<span>🟦 M=近10日×60%+近20日×40%</span>
+<span>🟩 V=60日价格分位(越低分越高)</span>
+<span>🟨 F=5日均量/20日均量×50</span>
+<span>🔴🟢 涨红跌绿(A股习惯)</span>
+</div>
+<div class="mkt neutral">📈 大盘趋势: <b>🟡 中性·震荡</b> | 上证综指 <b>—</b> | 20日线 — | 60日线 — | 20日动量 <b>—%</b> | 建议总仓位 <b>50%</b></div>
+<div class="pc"><div class="pcard">
+  <div class="prank">🏆 综合得分第13名</div>
+  <div class="pname">电力 <span class="pcode">(sz159611)</span></div>
+  <div class="pdetail">
+    <span>现价: <b>1.057</b></span> |
+    <span class="fc-m">M: 1.70</span> |
+    <span class="fc-v">V: 45.2</span> |
+    <span class="fc-f">F: 53.0</span> |
+    <span>综合: <b class="fc-t">30.13</b></span>
+  </div>
+  <div class="pw">💰 建议仓位: 25%</div>
+  <div class="pr">✅ 三重风控通过 | 日涨跌: <span class="pos">+0.28%</span> | 5日收益: <span class="pos">+2.13%</span> | 10日收益: <span class="pos">+2.13%</span> | 📅 信号持续: 0天</div>
+  <div class="op act-grid">🎯 操作: <b>网格</b> — 震荡市箱体 0.996~1.111, 5格/步长2.31%, 破下沿-5%止损</div>
+  <div class="opd">🛡 止损参考: ¥0.946 (20日线)</div>
+  <div class="opd">🔲 网格区间: ¥0.996 ~ 1.111</div>
+  <div class="opd">📊 历史最优持股 <b>1天</b>(均收益 -0.0%, 胜率 51%)</div>
+  <div class="opd">📅 信号后持有 <b>5天</b> 平均收益 <b>-0.35%</b>(胜率 46%, 样本37)</div>
+</div>
+<div class="pcard">
+  <div class="prank">🏆 综合得分第20名</div>
+  <div class="pname">十年国债 <span class="pcode">(sh511260)</span></div>
+  <div class="pdetail">
+    <span>现价: <b>135.858</b></span> |
+    <span class="fc-m">M: 0.10</span> |
+    <span class="fc-v">V: 5.4</span> |
+    <span class="fc-f">F: 50.9</span> |
+    <span>综合: <b class="fc-t">16.92</b></span>
+  </div>
+  <div class="pw">💰 建议仓位: 25%</div>
+  <div class="pr">✅ 三重风控通过 | 日涨跌: <span class="pos">+0.00%</span> | 5日收益: <span class="neg">-0.02%</span> | 10日收益: <span class="pos">+0.12%</span> | 📅 信号持续: 0天</div>
+  <div class="op act-hold">🎯 操作: <b>持有</b> — 趋势持有, 关注信号持续(0天)</div>
+  <div class="opd">🛡 止损参考: ¥135.810 (20日线)</div>
+  <div class="opd">🔲 网格区间: —</div>
+  <div class="opd">📊 历史最优持股 <b>10天</b>(均收益 +0.1%, 胜率 69%)</div>
+  <div class="opd">📅 信号后持有 <b>5天</b> 平均收益 <b>+0.01%</b>(胜率 74%, 样本54)</div>
+</div></div>
+<table><thead><tr>
+<th>#</th><th>代码</th><th>名称</th><th>现价</th><th>日涨幅</th><th>5日收益</th><th>10日收益</th>
+<th>M得分</th><th>V分位</th><th>V得分</th><th>F比率</th><th>F得分</th><th>综合</th><th>风控</th>
+<th>信号天数</th><th>最优持股</th><th>5日平均收益</th><th>操作</th>
+</tr></thead><tbody><tr>
+  <td>1</td><td class="code">sh513520</td><td class="name">日经225</td>
+  <td>2.235</td><td class="neg">-1.24%</td>
+  <td class="neg">-3.16%</td>
+  <td class="neg">-1.72%</td><td>-3.73</td>
+  <td>30.9%</td><td>69.1</td>
+  <td>0.93</td><td>46.4</td>
+  <td class="total">33.15</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>20天<br><span class="td2">均+1.66%</span></td><td class="pos"><b>+0.69%</b><br><span class="td2">胜率51%·样本49</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>2</td><td class="code">sh562500</td><td class="name">机器人</td>
+  <td>0.914</td><td class="pos">+0.44%</td>
+  <td class="neg">-4.39%</td>
+  <td class="neg">-6.06%</td><td>-7.90</td>
+  <td>3.7%</td><td>96.3</td>
+  <td>0.79</td><td>39.6</td>
+  <td class="total">37.62</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>10天<br><span class="td2">均+1.26%</span></td><td class="pos"><b>+0.32%</b><br><span class="td2">胜率50%·样本32</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>3</td><td class="code">sh515980</td><td class="name">人工智能</td>
+  <td>0.981</td><td class="neg">-1.41%</td>
+  <td class="neg">-4.66%</td>
+  <td class="neg">-6.03%</td><td>-8.43</td>
+  <td>9.2%</td><td>90.8</td>
+  <td>0.81</td><td>40.7</td>
+  <td class="total">36.07</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>10天<br><span class="td2">均+0.93%</span></td><td class="pos"><b>+0.30%</b><br><span class="td2">胜率52%·样本44</span></td><td class="act-hold">观望</td>
+</tr>
+<tr class="hl">
+  <td>4</td><td class="code">sh511260</td><td class="name">十年国债</td>
+  <td>135.858</td><td class="pos">+0.00%</td>
+  <td class="neg">-0.02%</td>
+  <td class="pos">+0.12%</td><td>0.10</td>
+  <td>94.6%</td><td>5.4</td>
+  <td>1.02</td><td>50.9</td>
+  <td class="total">16.92</td><td><span class="badge pass">✅通过</span></td>
+  <td>—</td><td>10天<br><span class="td2">均+0.07%</span></td><td class="pos"><b>+0.01%</b><br><span class="td2">胜率74%·样本54</span></td><td class="act-hold">持有</td>
+</tr>
+<tr>
+  <td>5</td><td class="code">sh511090</td><td class="name">三十年国债</td>
+  <td>118.730</td><td class="neg">-0.12%</td>
+  <td class="neg">-0.33%</td>
+  <td class="pos">+0.24%</td><td>0.02</td>
+  <td>76.2%</td><td>23.8</td>
+  <td>0.88</td><td>43.8</td>
+  <td class="total">20.30</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>20天<br><span class="td2">均+0.37%</span></td><td class="neg"><b>-0.01%</b><br><span class="td2">胜率53%·样本49</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>6</td><td class="code">sz159825</td><td class="name">农业</td>
+  <td>0.740</td><td class="neg">-1.07%</td>
+  <td class="neg">-4.52%</td>
+  <td class="neg">-1.73%</td><td>0.02</td>
+  <td>65.0%</td><td>35.0</td>
+  <td>1.11</td><td>55.5</td>
+  <td class="total">27.17</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>20天<br><span class="td2">均+1.74%</span></td><td class="neg"><b>-0.06%</b><br><span class="td2">胜率54%·样本28</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>7</td><td class="code">sz159996</td><td class="name">家电</td>
+  <td>1.413</td><td class="pos">+0.21%</td>
+  <td class="neg">-2.55%</td>
+  <td class="neg">-2.35%</td><td>-2.05</td>
+  <td>42.7%</td><td>57.3</td>
+  <td>0.61</td><td>30.7</td>
+  <td class="total">25.55</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均+0.10%</span></td><td class="neg"><b>-0.06%</b><br><span class="td2">胜率44%·样本25</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>8</td><td class="code">sh513030</td><td class="name">德国DAX</td>
+  <td>1.821</td><td class="neg">-0.33%</td>
+  <td class="neg">-2.41%</td>
+  <td class="neg">-4.91%</td><td>-6.36</td>
+  <td>31.5%</td><td>68.5</td>
+  <td>0.49</td><td>24.4</td>
+  <td class="total">25.35</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均+0.04%</span></td><td class="neg"><b>-0.20%</b><br><span class="td2">胜率41%·样本39</span></td><td class="act-hold">观望</td>
+</tr>
+<tr class="hl">
+  <td>9</td><td class="code">sz159611</td><td class="name">电力</td>
+  <td>1.057</td><td class="pos">+0.28%</td>
+  <td class="pos">+2.13%</td>
+  <td class="pos">+2.13%</td><td>1.70</td>
+  <td>54.8%</td><td>45.2</td>
+  <td>1.06</td><td>53.0</td>
+  <td class="total">30.13</td><td><span class="badge pass">✅通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.01%</span></td><td class="neg"><b>-0.35%</b><br><span class="td2">胜率46%·样本37</span></td><td class="act-grid">网格</td>
+</tr>
+<tr>
+  <td>10</td><td class="code">sz159985</td><td class="name">豆粕</td>
+  <td>2.291</td><td class="neg">-1.46%</td>
+  <td class="neg">-5.45%</td>
+  <td class="neg">-0.65%</td><td>2.25</td>
+  <td>65.7%</td><td>34.3</td>
+  <td>1.43</td><td>71.6</td>
+  <td class="total">32.67</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均+0.01%</span></td><td class="neg"><b>-0.53%</b><br><span class="td2">胜率34%·样本29</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>11</td><td class="code">sh513080</td><td class="name">法国CAC</td>
+  <td>1.754</td><td class="pos">+0.11%</td>
+  <td class="neg">-1.63%</td>
+  <td class="neg">-1.85%</td><td>-2.54</td>
+  <td>29.4%</td><td>70.6</td>
+  <td>1.01</td><td>50.7</td>
+  <td class="total">35.39</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.16%</span></td><td class="neg"><b>-0.67%</b><br><span class="td2">胜率27%·样本33</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>12</td><td class="code">sh516110</td><td class="name">汽车</td>
+  <td>1.076</td><td class="pos">+1.13%</td>
+  <td class="neg">-2.45%</td>
+  <td class="neg">-3.15%</td><td>-3.73</td>
+  <td>11.5%</td><td>88.5</td>
+  <td>0.86</td><td>43.2</td>
+  <td class="total">38.01</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.24%</span></td><td class="neg"><b>-0.91%</b><br><span class="td2">胜率21%·样本19</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>13</td><td class="code">sh516950</td><td class="name">基建</td>
+  <td>1.024</td><td class="neg">-0.29%</td>
+  <td class="neg">-0.78%</td>
+  <td class="neg">-1.06%</td><td>-1.29</td>
+  <td>28.6%</td><td>71.4</td>
+  <td>0.84</td><td>42.1</td>
+  <td class="total">33.53</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.08%</span></td><td class="neg"><b>-1.00%</b><br><span class="td2">胜率29%·样本21</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>14</td><td class="code">sh515210</td><td class="name">钢铁</td>
+  <td>1.143</td><td class="neg">-0.26%</td>
+  <td class="neg">-1.38%</td>
+  <td class="neg">-3.46%</td><td>-3.00</td>
+  <td>40.2%</td><td>59.8</td>
+  <td>0.94</td><td>46.8</td>
+  <td class="total">30.78</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.24%</span></td><td class="neg"><b>-1.05%</b><br><span class="td2">胜率20%·样本15</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>15</td><td class="code">sz159745</td><td class="name">建材</td>
+  <td>0.522</td><td class="pos">+0.00%</td>
+  <td class="neg">-2.79%</td>
+  <td class="neg">-2.97%</td><td>-2.83</td>
+  <td>22.6%</td><td>77.4</td>
+  <td>0.79</td><td>39.4</td>
+  <td class="total">33.89</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.22%</span></td><td class="neg"><b>-1.78%</b><br><span class="td2">胜率8%·样本12</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>16</td><td class="code">sh516150</td><td class="name">稀土</td>
+  <td>1.644</td><td class="pos">+0.37%</td>
+  <td class="neg">-2.61%</td>
+  <td class="neg">-6.59%</td><td>-8.25</td>
+  <td>17.6%</td><td>82.4</td>
+  <td>0.71</td><td>35.3</td>
+  <td class="total">32.02</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.25%</span></td><td class="neg"><b>-1.83%</b><br><span class="td2">胜率35%·样本31</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>17</td><td class="code">sh515220</td><td class="name">煤炭</td>
+  <td>1.273</td><td class="neg">-1.47%</td>
+  <td class="pos">+0.24%</td>
+  <td class="neg">-7.62%</td><td>-4.00</td>
+  <td>66.2%</td><td>33.8</td>
+  <td>0.91</td><td>45.7</td>
+  <td class="total">22.25</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>20天<br><span class="td2">均-0.03%</span></td><td class="neg"><b>-1.88%</b><br><span class="td2">胜率38%·样本34</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>18</td><td class="code">sz159870</td><td class="name">化工</td>
+  <td>0.771</td><td class="neg">-0.26%</td>
+  <td class="neg">-3.02%</td>
+  <td class="neg">-7.22%</td><td>-6.54</td>
+  <td>19.6%</td><td>80.4</td>
+  <td>0.98</td><td>48.9</td>
+  <td class="total">36.16</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.12%</span></td><td class="neg"><b>-2.07%</b><br><span class="td2">胜率26%·样本31</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>19</td><td class="code">sh515230</td><td class="name">软件</td>
+  <td>0.669</td><td class="pos">+0.60%</td>
+  <td class="neg">-4.15%</td>
+  <td class="neg">-5.64%</td><td>-6.37</td>
+  <td>22.7%</td><td>77.3</td>
+  <td>0.67</td><td>33.6</td>
+  <td class="total">30.72</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.33%</span></td><td class="neg"><b>-2.22%</b><br><span class="td2">胜率24%·样本25</span></td><td class="act-hold">观望</td>
+</tr>
+<tr>
+  <td>20</td><td class="code">sh512980</td><td class="name">传媒</td>
+  <td>0.811</td><td class="neg">-1.34%</td>
+  <td class="neg">-6.57%</td>
+  <td class="neg">-3.57%</td><td>-4.07</td>
+  <td>49.3%</td><td>50.7</td>
+  <td>0.85</td><td>42.7</td>
+  <td class="total">26.40</td><td><span class="badge fail">❌未通过</span></td>
+  <td>—</td><td>1天<br><span class="td2">均-0.71%</span></td><td class="neg"><b>-3.27%</b><br><span class="td2">胜率16%·样本19</span></td><td class="act-hold">观望</td>
+</tr>
+</tbody></table>
+
+<div class="hist-title">📋 历史推荐记录</div>
+<table class="hist-table"><thead><tr>
+<th>更新时间</th><th>推荐持仓</th><th>ETF总数</th><th>风控通过数</th><th>大盘/总仓</th>
+</tr></thead><tbody><tr>
+  <td>2026-09-14 20:13</td><td>电力(30.1) | 十年国债(16.9)</td><td>20</td><td>2</td><td>中性/50%</td>
+</tr>
+<tr>
+  <td>2026-09-14 20:13</td><td>旅游(37.9) | 有色金属(32.3)</td><td>21</td><td>9</td><td>中性/50%</td>
+</tr>
+<tr>
+  <td>2026-09-14 20:10</td><td>电力(30.1)</td><td>48</td><td>5</td><td>弱势/20%</td>
+</tr>
+<tr>
+  <td>2026-09-14 19:41</td><td>电力(30.1)</td><td>48</td><td>5</td><td>弱势/20%</td>
+</tr>
+<tr>
+  <td>2026-09-13 22:47</td><td>军工(34.1)</td><td>48</td><td>6</td><td>弱势/20%</td>
+</tr>
+<tr>
+  <td>2026-09-12 21:50</td><td>军工(34.1)</td><td>48</td><td>6</td><td>弱势/20%</td>
+</tr>
+<tr>
+  <td>2026-09-11 22:49</td><td>军工(34.1)</td><td>48</td><td>6</td><td>弱势/20%</td>
+</tr>
+<tr>
+  <td>2026-09-10 22:45</td><td>豆粕(34.6) | 军工(33.9)</td><td>48</td><td>13</td><td>中性/50%</td>
+</tr>
+<tr>
+  <td>2026-09-10 19:23</td><td>豆粕(34.6) | 军工(33.9)</td><td>48</td><td>13</td><td>中性/50%</td>
+</tr>
+<tr>
+  <td>2026-09-09 15:02</td><td>电信(36.9) | 军工(33.3)</td><td>48</td><td>17</td><td>中性/50%</td>
+</tr></tbody></table>
+
+<div class="tip">
+📌 <b>使用说明：</b>每天19:00后查看 → 先看顶部「大盘趋势」定总仓位 → 选综合前N名(仓位随大盘缩放) → 看「信号天数」判断是否已持仓/刚触发 → 看「最优持股」定持有周期 → 按「操作」标签执行(加仓/网格/持有/止损)<br>
+📌 <b>本表排序：</b>表格按「5日平均收益」从高到低排行，无回测样本的标的排最后。「#」列是这个排行榜的序号；<b>持仓卡片仍按综合得分选出</b>，实盘策略口径没有变。<br>
+📌 <b>5日平均收益：</b>历史上"综合前N名 + 三重风控通过"的日子买入、持有5天的平均收益（小字为胜率·样本数）。<b>样本数少于5的会标⚠，排名参考价值低。</b>它衡量"这只ETF一旦被策略选中、拿5天"的历史表现，<b>和上面的「5日收益」不是一回事</b>（那个是最近5个交易日的实际涨幅）。<br>
+📌 <b>5日收益：</b>近5个交易日累计涨幅，看短线动能。刚转正(0~+3%)=刚启动可跟；已涨一大段(+10%以上)=注意追高风险；为负但10日收益为正=短期回调。<br>
+📌 <b>10日收益：</b>近10个交易日累计涨幅，也用于M动量因子计算(占60%)。<br>
+📌 <b>信号天数：</b>综合进入前N(中性前2)且三重风控连续通过的天数。天数越长=趋势越稳；刚触发(1~2天)=新信号，可建仓观察。<br>
+📌 <b>历史最优持股：</b>回测"信号触发后持有1/3/5/10/20天"的平均收益，取最高者为最优持股天数（样本不足时显示—）。<br>
+📌 <b>操作标签：</b>🟢加仓=相对低位+资金流入，左侧分批；🔵网格=震荡区间分3档高抛低吸；🟡持有=趋势跟随；🔴止损=破均线或短期超跌，参考止损价离场。<br>
+📌 <b>大盘择时：</b>强势🟢满仓(100%,3只) / 中性🟡半仓(50%,2只) / 弱势🔴防御(20%,1只)。<br>
+📌 <b>三重风控：</b>①价格站上20日均线 ②均线向上 ③3日跌幅≤5%。止损参考=20日线(或-5%硬止损)。
+</div>
+<div class="ft">
+<p>⚡ 每个交易日19:00自动更新 | 数据源: 新浪财经(免费公开) | ⚠️ 仅供参考，投资有风险</p>
+<p>策略: 综合前N + 大盘择时 | 5日/10日收益 + 信号天数 + 历史回测最优持股 + 加仓/网格/止损建议</p>
+</div>
+</body></html>
